@@ -5,6 +5,13 @@
 #include <string>
 #include <vector>
 
+#define MAX_SPEED_MPH 50
+#define MAX_ACC 10.0
+#define MAX_JERK 10.0
+#define MPH_TO_MPS 0.44704
+#define UPDATE_RATE 0.02
+#define LANE_WIDTH 4.0
+
 // for convenience
 using std::string;
 using std::vector;
