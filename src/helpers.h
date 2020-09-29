@@ -11,6 +11,7 @@
 #define MPH_TO_MPS 0.44704
 #define UPDATE_RATE 0.02
 #define LANE_WIDTH 4.0
+#define TRACK_LENGTH 6945.554
 
 // for convenience
 using std::string;
