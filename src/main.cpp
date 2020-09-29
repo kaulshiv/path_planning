@@ -114,7 +114,7 @@ int main() {
           double prev_x = car_x, prev_y=car_y;
           vector <double> boundary_i, boundary_f; //initial and final boundary conditions for s coordinate
 
-          double T = 3.0;
+          double T = 1.0;
           double final_s_vel = MPH_TO_MPS*MAX_SPEED_MPH*0.9;
           if(prev_size){
             boundary_i = trajectory.get_initial_boundary_conditions(end_path_s, end_path_d);
