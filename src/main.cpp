@@ -7,7 +7,6 @@
 #include "Eigen-3.3/Eigen/QR"
 #include "helpers.h"
 #include "json.hpp"
-#include "spline.h"
 #include "jmt.h"
 
 // for convenience
@@ -54,6 +53,7 @@ int main() {
 
   int num_consumed =0;
   jmt::JerkMinimalTrajectory trajectory;
+  trajectory.set_splines(map_waypoints_x, map_waypoints_y, map_waypoints_s, map_waypoints_dx, map_waypoints_dy);
 
   h.onMessage([&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,
                &map_waypoints_dx,&map_waypoints_dy, &num_consumed,
@@ -113,27 +113,23 @@ int main() {
           vector <double> previous_path_s, previous_path_d;
           double prev_x = car_x, prev_y=car_y;
           vector <double> boundary_i, boundary_f; //initial and final boundary conditions for s coordinate
+          vector <string> boundnames = {"spos", "svel", "sacc", "dpos", "dvel", "dacc"};
 
-          double T = 1.0;
+          // double T = 1.0;
           double final_s_vel = MPH_TO_MPS*MAX_SPEED_MPH*0.9;
+          double add_on_dist = 30, Tmin;
           if(prev_size){
             boundary_i = trajectory.get_initial_boundary_conditions(end_path_s, end_path_d);
-            // std::cout << "boundary conds" << std::endl;
-            for(auto i=boundary_i.begin(); i!=boundary_i.end(); ++i)
-              printf("%f, ", *i);
-            std::cout << std::endl;
-            double add_on_dist = (final_s_vel + boundary_i[1])*T*0.5;
             boundary_f = {end_path_s+add_on_dist,final_s_vel, 0.0, 2+LANE_WIDTH*lane, 0.0, 0.0};
           }
           else{
             boundary_i = trajectory.get_initial_boundary_conditions(car_s, car_d);
-            double add_on_dist = (final_s_vel + boundary_i[1])*T*0.5;
-            boundary_f = {car_s+add_on_dist+10, final_s_vel, 0.0, 2+LANE_WIDTH*lane, 0.0, 0.0};
+            boundary_f = {car_s+add_on_dist, final_s_vel, 0.0, 2+LANE_WIDTH*lane, 0.0, 0.0};
           }
 
-          trajectory.set_coeffs(boundary_i, boundary_f, T); 
-          trajectory.clear_buffers();
-          trajectory.fill_buffers(UPDATE_RATE, (int)(T/UPDATE_RATE));
+          Tmin = add_on_dist/final_s_vel;
+          int num_points =  20; //(int)(T/UPDATE_RATE);
+          trajectory.set_trajectory(boundary_i, boundary_f, Tmin, num_points);
 
           for(int i=0;i<prev_size;i++){
             next_x_vals.push_back(previous_path_x[i]);
@@ -141,11 +137,11 @@ int main() {
           }
 
           // std::cout << "NEXT_VALS_________________" << std::endl;
-          for(int i=0;i<(int)(T/UPDATE_RATE)-prev_size;i++){
-            vector <double> xy = getXY(trajectory.s_position_buffer[i], trajectory.d_position_buffer[i], map_waypoints_s, map_waypoints_x, map_waypoints_y);
-            std::cout << "s: " <<  trajectory.s_position_buffer[i] << ", d: " << trajectory.d_position_buffer[i] << std::endl;
-            next_x_vals.push_back(xy[0]);
-            next_y_vals.push_back(xy[1]);
+          for(int i=0;i<num_points-prev_size;i++){
+            // vector <double> xy = getXY(trajectory.s_position_buffer[i], trajectory.d_position_buffer[i], map_waypoints_s, map_waypoints_x, map_waypoints_y);
+            // std::cout << "s: " <<  trajectory.s_position_buffer[i] << ", d: " << trajectory.d_position_buffer[i] << std::endl;
+            next_x_vals.push_back(trajectory.x_position[i]);
+            next_y_vals.push_back(trajectory.y_position[i]);
           }
           // for(int i=0; i<next_x_vals.size() ;i++)
           //   std::cout << next_x_vals[i] << ", " << next_y_vals[i] << std::endl;

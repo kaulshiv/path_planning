@@ -1,9 +1,24 @@
 #include <iostream>
 #include <string>
 #include "jmt.h"
-// #include "helpers.h"
 
 namespace jmt{
+
+void JerkMinimalTrajectory::set_trajectory(const vector<double> &boundary_i, const vector<double> &boundary_f, double Tmin, int num_points){
+  this->set_coeffs(boundary_i, boundary_f, Tmin);
+  
+  while(!this->valid_trajectory(num_points)){
+    std::cout << "Tmin = " << Tmin << " ";
+    Tmin += UPDATE_RATE;
+    this->set_coeffs(boundary_i, boundary_f, Tmin);
+    // this->clear_buffers();
+    // this->fill_buffers(num_points);
+  }
+
+  this->clear_buffers();
+  this->fill_buffers(num_points);
+
+}
 
 void JerkMinimalTrajectory::set_coeffs(const vector<double> &start, const vector<double> &end, double T) {
   /**
@@ -87,50 +102,92 @@ double JerkMinimalTrajectory::get_acceleration(double x, coordinate c){
   return 2*coeffs[2] + 6*coeffs[3]*x + 12*coeffs[4]*pow(x,2) + 20*coeffs[5]*pow(x,3);
 }
 
+double JerkMinimalTrajectory::get_jerk(double x, coordinate c){
+  vector <double> coeffs=this->get_coeffs(c);
+  return 6*coeffs[3] + 24*coeffs[4]*x + 60*coeffs[5]*pow(x,2);
+}
 
 void JerkMinimalTrajectory::clear_buffers()
 {
-  this->s_position_buffer.clear();
-  this->s_velocity_buffer.clear();
-  this->s_acceleration_buffer.clear();
-  this->d_position_buffer.clear();
-  this->d_velocity_buffer.clear();
-  this->d_acceleration_buffer.clear();
+  this->s_position.clear();
+  this->s_velocity.clear();
+  this->s_acceleration.clear();
+  this->d_position.clear();
+  this->d_velocity.clear();
+  this->d_acceleration.clear();
+  this->x_position.clear();
+  this->y_position.clear();   
 }
 
-void JerkMinimalTrajectory::fill_buffers(double update_rate, double buffer_size){
+void JerkMinimalTrajectory::fill_buffers(double buffer_size){
+
+  double s, d;
+
   for(int i=0;i<buffer_size;i++){
-      this->s_position_buffer.push_back(this->get_position((i+1)*update_rate, S_COORD));
-      this->s_velocity_buffer.push_back(this->get_velocity((i+1)*update_rate, S_COORD));
-      this->s_acceleration_buffer.push_back(this->get_acceleration((i+1)*update_rate, S_COORD));
-      this->d_position_buffer.push_back(this->get_position((i+1)*update_rate, D_COORD));
-      this->d_velocity_buffer.push_back(this->get_velocity((i+1)*update_rate, D_COORD));
-      this->d_acceleration_buffer.push_back(this->get_acceleration((i+1)*update_rate, D_COORD));
+      s = this->get_position((i+1)*UPDATE_RATE, S_COORD);
+      d = this->get_position((i+1)*UPDATE_RATE, D_COORD);
+
+      this->s_position.push_back(s);
+      this->s_velocity.push_back(this->get_velocity((i+1)*UPDATE_RATE, S_COORD));
+      this->s_acceleration.push_back(this->get_acceleration((i+1)*UPDATE_RATE, S_COORD));
+      this->s_jerk.push_back(this->get_jerk((i+1)*UPDATE_RATE, S_COORD));
+
+      this->d_position.push_back(d);
+      this->d_velocity.push_back(this->get_velocity((i+1)*UPDATE_RATE, D_COORD));
+      this->d_acceleration.push_back(this->get_acceleration((i+1)*UPDATE_RATE, D_COORD));
+      this->d_jerk.push_back(this->get_jerk((i+1)*UPDATE_RATE, D_COORD));
+
+      this->x_position.push_back(this->s_x(s) + d*this->s_dx(s));
+      this->y_position.push_back(this->s_y(s) + d*this->s_dy(s));
+
   }
 }
 
 vector <double> JerkMinimalTrajectory::get_initial_boundary_conditions(double current_position_s, double current_position_d){
-  if(!this->s_position_buffer.size())
+  if(!this->s_position.size())
     return {current_position_s,0,0,current_position_d,0,0};
   
-  double min_dist = this->distance(current_position_s, current_position_d, this->s_position_buffer[0], this->d_position_buffer[0]);
+  double min_dist = distance(current_position_s, current_position_d, this->s_position[0], this->d_position[0]);
   double min_ind = 0, new_dist;
-  for(int i=0; i<this->s_position_buffer.size(); i++){
-    new_dist = this->distance(current_position_s, current_position_d, this->s_position_buffer[i], this->d_position_buffer[i]);
+  for(int i=0; i<this->s_position.size(); i++){
+    new_dist = distance(current_position_s, current_position_d, this->s_position[i], this->d_position[i]);
     if(new_dist < min_dist){
         min_dist = new_dist;
         min_ind = i;
     }
   }
-  
-  return {this->s_position_buffer[min_ind], this->s_velocity_buffer[min_ind], this->s_acceleration_buffer[min_ind],
-          this->d_position_buffer[min_ind], this->d_velocity_buffer[min_ind], this->d_acceleration_buffer[min_ind]};
+
+  return {this->s_position[min_ind], this->s_velocity[min_ind], this->s_acceleration[min_ind],
+          this->d_position[min_ind], this->d_velocity[min_ind], this->d_acceleration[min_ind]};
 }
 
 
-// Calculate distance between two points
-double JerkMinimalTrajectory::distance(double x1, double y1, double x2, double y2) {
-  return sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
+// Make sure the path doesn't violate any constraints
+bool JerkMinimalTrajectory::valid_trajectory(int num_points){
+
+  bool is_valid = true;
+  double total_jerk, total_velocity, total_acceleration; 
+  for(int i=0; i<num_points; i++){
+    total_velocity = magnitude(this->get_velocity((i+1)*UPDATE_RATE, S_COORD), this->get_velocity((i+1)*UPDATE_RATE, D_COORD));
+    total_acceleration = magnitude(this->get_acceleration((i+1)*UPDATE_RATE, S_COORD), this->get_acceleration((i+1)*UPDATE_RATE, D_COORD));
+    total_jerk= magnitude(this->get_jerk((i+1)*UPDATE_RATE, S_COORD), this->get_jerk((i+1)*UPDATE_RATE, D_COORD));
+    if(MAX_ACC*0.9 <= total_acceleration || MAX_SPEED_MPH*MPH_TO_MPS <= total_velocity || MAX_JERK*0.9 <= total_jerk){
+      is_valid = false;
+      std::cout << " ACC: " << total_acceleration << ", VEL: " << total_velocity << ", JERK: " << total_jerk <<  std::endl;
+      break;
+    }
+  }
+
+  return is_valid;
+}
+
+
+void JerkMinimalTrajectory::set_splines(vector<double> map_waypoints_x, vector<double> map_waypoints_y, vector<double> map_waypoints_s, 
+                                        vector<double> map_waypoints_dx, vector<double> map_waypoints_dy){
+    this->s_x.set_points(map_waypoints_s, map_waypoints_x);
+    this->s_y.set_points(map_waypoints_s, map_waypoints_y);
+    this->s_dx.set_points(map_waypoints_s, map_waypoints_dx);
+    this->s_dy.set_points(map_waypoints_s, map_waypoints_dy);
 }
 
 } // end namespace jmt
