@@ -25,7 +25,7 @@ inline double deg2rad(double x) { return x * pi() / 180; }
 inline double rad2deg(double x) { return x * 180 / pi(); }
 
 // compute sum of squares
-inline double magnitude(double x, double y) { return pow(pow(x,2) + pow(x,2), 0.5); }
+inline double magnitude(double x, double y) { return pow(pow(x,2) + pow(y,2), 0.5); }
 
 
 // Calculate distance between two points

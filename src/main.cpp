@@ -128,7 +128,7 @@ int main() {
           }
 
           Tmin = add_on_dist/final_s_vel;
-          int num_points =  20; //(int)(T/UPDATE_RATE);
+          int num_points =  50; //(int)(T/UPDATE_RATE);
           trajectory.set_trajectory(boundary_i, boundary_f, Tmin, num_points);
 
           for(int i=0;i<prev_size;i++){
