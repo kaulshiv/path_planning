@@ -12,7 +12,6 @@
 
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
-using std::vector;
 
 namespace jmt{
 
@@ -28,7 +27,7 @@ private:
     double get_velocity(double x, coordinate c);
     double get_acceleration(double x, coordinate c);
     double get_jerk(double x, coordinate c);
-    void fill_buffers(double buffer_size);
+    void fill_buffers();
     void clear_buffers();
     vector <double> s_position, s_velocity, s_acceleration, s_jerk,
                      d_position, d_velocity, d_acceleration, d_jerk;
@@ -38,10 +37,12 @@ private:
 public:
     vector <double> x_position, y_position;
     void set_coeffs(const vector<double>& start, const vector<double>& end, double T);
-    vector <double> get_initial_boundary_conditions(double current_position_s, double current_position_d);
-    bool valid_trajectory(int num_points);
-    void set_trajectory(const vector<double> &boundary_i, const vector<double> &boundary_f, double Tmin, int num_points);
-    void set_splines(vector<double> map_waypoints_x, vector<double> map_waypoints_y, vector<double> map_waypoints_s, vector<double> map_waypoints_dx, vector<double> map_waypoints_dy);
+    vector <double> get_initial_boundary_conditions(double current_position_x, double current_position_y);
+    bool valid_trajectory();
+    vector <vector <double>> generate_trajectory(const vector<double> &boundary_i, const vector<double> &boundary_f, 
+                                                 double Tmin, bool set_trajectory);
+    void set_splines(vector<double> map_waypoints_x, vector<double> map_waypoints_y, vector<double> map_waypoints_s, 
+                     vector<double> map_waypoints_dx, vector<double> map_waypoints_dy);
 
 };
 

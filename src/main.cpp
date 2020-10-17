@@ -8,6 +8,7 @@
 #include "helpers.h"
 #include "json.hpp"
 #include "jmt.h"
+#include "ego.h"
 
 // for convenience
 using nlohmann::json;
@@ -51,20 +52,18 @@ int main() {
     map_waypoints_dy.push_back(d_y);
   }
 
-  int num_consumed =0;
-  jmt::JerkMinimalTrajectory trajectory;
-  trajectory.set_splines(map_waypoints_x, map_waypoints_y, map_waypoints_s, map_waypoints_dx, map_waypoints_dy);
+  JerkMinimalTrajectory jmt;
+  EgoVehicle ego_vehicle(KEEP_LANE, 1, &jmt);
+  jmt.set_splines(map_waypoints_x, map_waypoints_y, map_waypoints_s, map_waypoints_dx, map_waypoints_dy);
 
   h.onMessage([&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,
-               &map_waypoints_dx,&map_waypoints_dy, &num_consumed,
-               &trajectory]
+               &map_waypoints_dx,&map_waypoints_dy, &jmt, &ego_vehicle]
               (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
 
-    int lane = 1;
     // double ref_vel = 49.5; // reference velocity in mph
     if (length && length > 2 && data[0] == '4' && data[1] == '2') {
 
@@ -107,44 +106,26 @@ int main() {
            *   sequentially every .02 seconds
            */
           int prev_size = previous_path_x.size();
-          num_consumed += (3.0/UPDATE_RATE)-prev_size;
-          // std::cout << "number of points consumed:" << num_consumed <<std::endl;
+          if(!prev_size)
+            ego_vehicle.set_pose(car_x, car_y, car_s, car_d, -1, -1);
+          else
+            ego_vehicle.set_pose(car_x, car_y, car_s, car_d, previous_path_x[prev_size-1], previous_path_y[prev_size-1]);
 
-          vector <double> previous_path_s, previous_path_d;
-          double prev_x = car_x, prev_y=car_y;
-          vector <double> boundary_i, boundary_f; //initial and final boundary conditions for s coordinate
-          vector <string> boundnames = {"spos", "svel", "sacc", "dpos", "dvel", "dacc"};
-
-          // double T = 1.0;
-          double final_s_vel = MPH_TO_MPS*MAX_SPEED_MPH*0.9;
-          double add_on_dist = 30, Tmin;
-          if(prev_size){
-            boundary_i = trajectory.get_initial_boundary_conditions(end_path_s, end_path_d);
-            boundary_f = {end_path_s+add_on_dist,final_s_vel, 0.0, 2+LANE_WIDTH*lane, 0.0, 0.0};
-          }
-          else{
-            boundary_i = trajectory.get_initial_boundary_conditions(car_s, car_d);
-            boundary_f = {car_s+add_on_dist, final_s_vel, 0.0, 2+LANE_WIDTH*lane, 0.0, 0.0};
-          }
-
-          Tmin = add_on_dist/final_s_vel;
-          int num_points =  50; //(int)(T/UPDATE_RATE);
-          trajectory.set_trajectory(boundary_i, boundary_f, Tmin, num_points);
+          vector <vector<double>> new_xy_trajectory = ego_vehicle.transition_function(sensor_fusion);
 
           for(int i=0;i<prev_size;i++){
             next_x_vals.push_back(previous_path_x[i]);
             next_y_vals.push_back(previous_path_y[i]);
           }
 
-          // std::cout << "NEXT_VALS_________________" << std::endl;
-          for(int i=0;i<num_points-prev_size;i++){
-            // vector <double> xy = getXY(trajectory.s_position_buffer[i], trajectory.d_position_buffer[i], map_waypoints_s, map_waypoints_x, map_waypoints_y);
-            // std::cout << "s: " <<  trajectory.s_position_buffer[i] << ", d: " << trajectory.d_position_buffer[i] << std::endl;
-            next_x_vals.push_back(trajectory.x_position[i]);
-            next_y_vals.push_back(trajectory.y_position[i]);
+
+          vector <double> new_xy;
+          for(int i=0; i < NUM_SIMULATOR_POINTS-prev_size; i++){
+            new_xy = new_xy_trajectory[i];
+            next_x_vals.push_back(new_xy[0]);
+            next_y_vals.push_back(new_xy[1]);
+            // std::cout << next_x_vals[i] << ", " << next_y_vals[i] << std::endl;
           }
-          // for(int i=0; i<next_x_vals.size() ;i++)
-          //   std::cout << next_x_vals[i] << ", " << next_y_vals[i] << std::endl;
 
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;

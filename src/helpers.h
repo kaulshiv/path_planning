@@ -12,6 +12,7 @@
 #define UPDATE_RATE 0.02
 #define LANE_WIDTH 4.0
 #define TRACK_LENGTH 6945.554
+#define NUM_SIMULATOR_POINTS 50
 
 // for convenience
 using std::string;
