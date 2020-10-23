@@ -12,10 +12,8 @@
 using jmt::JerkMinimalTrajectory;
 
 enum vehicle_state {KEEP_LANE = 0, 
-                    PREPARE_LANE_CHANGE_RIGHT = 1,
-                    PREPARE_LANE_CHANGE_LEFT = 2,
-                    LANE_CHANGE_RIGHT = 3,
-                    LANE_CHANGE_LEFT = 4};
+                    LANE_CHANGE_RIGHT = 1,
+                    LANE_CHANGE_LEFT = 2};
 
 
 class EgoVehicle{

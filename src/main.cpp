@@ -106,10 +106,14 @@ int main() {
            *   sequentially every .02 seconds
            */
           int prev_size = previous_path_x.size();
-          if(!prev_size)
+          if(!prev_size){
+            std::cout << "initial car yaw: " << car_yaw << std::endl;
             ego_vehicle.set_pose(car_x, car_y, car_s, car_d, -1, -1);
-          else
+          }
+          else{
+            std::cout << "car d: " << car_d << std::endl;
             ego_vehicle.set_pose(car_x, car_y, car_s, car_d, previous_path_x[prev_size-1], previous_path_y[prev_size-1]);
+          }
 
           vector <vector<double>> new_xy_trajectory = ego_vehicle.transition_function(sensor_fusion);
 
