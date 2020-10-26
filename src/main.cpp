@@ -7,7 +7,6 @@
 #include "Eigen-3.3/Eigen/QR"
 #include "helpers.h"
 #include "json.hpp"
-#include "jmt.h"
 #include "ego.h"
 
 // for convenience
@@ -52,12 +51,10 @@ int main() {
     map_waypoints_dy.push_back(d_y);
   }
 
-  JerkMinimalTrajectory jmt;
-  EgoVehicle ego_vehicle(KEEP_LANE, 1, &jmt);
-  jmt.set_splines(map_waypoints_x, map_waypoints_y, map_waypoints_s, map_waypoints_dx, map_waypoints_dy);
-
+  EgoVehicle ego_vehicle(KEEP_LANE, 1);
+  ego_vehicle.set_splines(map_waypoints_x, map_waypoints_y, map_waypoints_s, map_waypoints_dx, map_waypoints_dy);
   h.onMessage([&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,
-               &map_waypoints_dx,&map_waypoints_dy, &jmt, &ego_vehicle]
+               &map_waypoints_dx,&map_waypoints_dy, &ego_vehicle]
               (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -106,15 +103,11 @@ int main() {
            *   sequentially every .02 seconds
            */
           int prev_size = previous_path_x.size();
-          if(!prev_size){
-            std::cout << "initial car yaw: " << car_yaw << std::endl;
-            ego_vehicle.set_pose(car_x, car_y, car_s, car_d, -1, -1);
-          }
-          else{
-            std::cout << "car d: " << car_d << std::endl;
-            ego_vehicle.set_pose(car_x, car_y, car_s, car_d, previous_path_x[prev_size-1], previous_path_y[prev_size-1]);
-          }
-
+          if(!prev_size)
+            ego_vehicle.set_pose(car_x, car_y, car_s, car_d, {}, {});
+          else
+            ego_vehicle.set_pose(car_x, car_y, car_s, car_d, previous_path_x, previous_path_y);
+          
           vector <vector<double>> new_xy_trajectory = ego_vehicle.transition_function(sensor_fusion);
 
           for(int i=0;i<prev_size;i++){

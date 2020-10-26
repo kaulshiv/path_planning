@@ -29,18 +29,18 @@ private:
     double get_jerk(double x, coordinate c);
     void fill_buffers();
     void clear_buffers();
-    vector <double> s_position, s_velocity, s_acceleration, s_jerk,
-                     d_position, d_velocity, d_acceleration, d_jerk;
     tk::spline s_x, s_y, s_dx, s_dy;
     
 
 public:
-    vector <double> x_position, y_position;
+    vector <double> s_position, s_velocity, s_acceleration, s_jerk,
+                    d_position, d_velocity, d_acceleration, d_jerk,
+                    x_position, y_position;
     void set_coeffs(const vector<double>& start, const vector<double>& end, double T);
     vector <double> get_initial_boundary_conditions(double current_position_x, double current_position_y);
     bool valid_trajectory();
     vector <vector <double>> generate_trajectory(const vector<double> &boundary_i, const vector<double> &boundary_f, 
-                                                 double Tmin, bool set_trajectory);
+                                                 double Tmin);
     void set_splines(vector<double> map_waypoints_x, vector<double> map_waypoints_y, vector<double> map_waypoints_s, 
                      vector<double> map_waypoints_dx, vector<double> map_waypoints_dy);
 

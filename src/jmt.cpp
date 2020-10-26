@@ -2,7 +2,7 @@
 
 namespace jmt{
 
-vector <vector <double>> JerkMinimalTrajectory::generate_trajectory(const vector<double> &boundary_i, const vector<double> &boundary_f, double Tmin, bool set_trajectory){
+vector <vector <double>> JerkMinimalTrajectory::generate_trajectory(const vector<double> &boundary_i, const vector<double> &boundary_f, double Tmin){
   double s, d;
   vector <vector <double>> xy_trajectory = {};
   vector <double> xy_coordinates;
@@ -13,25 +13,15 @@ vector <vector <double>> JerkMinimalTrajectory::generate_trajectory(const vector
     this->set_coeffs(boundary_i, boundary_f, Tmin);
   }
 
+  // std::cout << "Tmin: " << Tmin << std::endl;
+  this->clear_buffers();
+  this->fill_buffers();
+
   for(int i=0;i<NUM_SIMULATOR_POINTS;i++){
     xy_coordinates = {};
-    s = fmod(this->get_position((i+1)*UPDATE_RATE, S_COORD), TRACK_LENGTH);
-    d = this->get_position((i+1)*UPDATE_RATE, D_COORD);
-
-    xy_coordinates.push_back(this->s_x(s) + d*this->s_dx(s));
-    xy_coordinates.push_back(this->s_y(s) + d*this->s_dy(s));
+    xy_coordinates.push_back(this->x_position[i]);
+    xy_coordinates.push_back(this->y_position[i]);
     xy_trajectory.push_back(xy_coordinates);
-  }
-
-  if(set_trajectory){
-    // for(auto bound: boundary_i)
-    //   std::cout << bound << ", ";
-    // std::cout << ". " << std::endl;
-    // for(auto bound: boundary_f)
-    //   std::cout << bound << ", ";
-    // std::cout << ". " << std::endl;
-    this->clear_buffers();
-    this->fill_buffers();
   }
 
   return xy_trajectory;
@@ -185,14 +175,14 @@ vector <double> JerkMinimalTrajectory::get_initial_boundary_conditions(double cu
 bool JerkMinimalTrajectory::valid_trajectory(){
 
   bool is_valid = true;
-  double total_jerk, total_velocity, total_acceleration; 
+  double total_jerk=0, total_velocity=0, total_acceleration=0; 
   for(int i=0; i<NUM_SIMULATOR_POINTS; i++){
     total_velocity = magnitude(this->get_velocity((i+1)*UPDATE_RATE, S_COORD), this->get_velocity((i+1)*UPDATE_RATE, D_COORD));
     total_acceleration = magnitude(this->get_acceleration((i+1)*UPDATE_RATE, S_COORD), this->get_acceleration((i+1)*UPDATE_RATE, D_COORD));
-    total_jerk= magnitude(this->get_jerk((i+1)*UPDATE_RATE, S_COORD), this->get_jerk((i+1)*UPDATE_RATE, D_COORD));
-    if(MAX_ACC*0.9 <= total_acceleration || MAX_SPEED_MPH*MPH_TO_MPS*0.98 <= total_velocity || MAX_JERK*0.9 <= total_jerk){
+    total_jerk = magnitude(this->get_jerk((i+1)*UPDATE_RATE, S_COORD), this->get_jerk((i+1)*UPDATE_RATE, D_COORD));
+    if(MAX_ACC*0.95 <= total_acceleration || MAX_SPEED_MPH*MPH_TO_MPS*0.95 <= total_velocity || MAX_JERK*0.95 <= total_jerk){
       is_valid = false;
-    //   std::cout << " ACC: " << total_acceleration << ", VEL: " << total_velocity << ", JERK: " << total_jerk <<  std::endl;
+      // std::cout << " ACC: " << total_acceleration << ",  VEL: " << total_velocity << ", JERK: " << total_jerk <<  std::endl;
       break;
     }
   }
