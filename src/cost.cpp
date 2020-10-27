@@ -1,19 +1,83 @@
 #include "cost.h"
 
-double calculate_cost(vector <vector <double>> sensor_fusion, const JerkMinimalTrajectory &jmt, int lane, double prev_size){
-  return weight_following*following_cost(sensor_fusion, jmt, lane)
-        + weight_collision*collision_cost(sensor_fusion, jmt, lane, prev_size)
-        + weight_final_speed*final_speed_cost(sensor_fusion, jmt, lane) 
-        + weight_lane_speed*lane_speed_cost(sensor_fusion, jmt, lane)
-        + weight_outofbounds*outofbounds_cost(sensor_fusion, jmt, lane);
+double calculate_cost(vector <vector <double>> sensor_fusion, const JerkMinimalTrajectory &jmt, int lane, bool is_lane_change, double ego_x, double ego_y, double ego_s){
+  return weight_following*following_cost(sensor_fusion, jmt, lane, ego_x, ego_y, ego_s)
+        + weight_lane_change*lane_change_cost(sensor_fusion, jmt, lane, is_lane_change, ego_x, ego_y, ego_s);
+        // + weight_final_speed*final_speed_cost(sensor_fusion, jmt, lane) 
+        // + weight_lane_speed*lane_speed_cost(sensor_fusion, jmt, lane)
+        // + weight_outofbounds*outofbounds_cost(sensor_fusion, jmt, lane)
+        // + weight_final_lane*final_lane_cost(sensor_fusion, jmt, lane) ;
 }
+
+
+double following_cost(vector <vector <double>> sensor_fusion, const JerkMinimalTrajectory &jmt, int lane, double ego_x, double ego_y, double ego_s){
+  double check_x, check_y, check_vx, check_vy, check_s, check_d;
+  // double car_x, car_y, car_s, x_disp, y_disp;
+  double following_distance = 30;
+  double min_dist = following_distance;
+
+  for(auto nonego_data: sensor_fusion){
+    check_x = nonego_data[1];
+    check_y = nonego_data[2];
+    // check_vx = nonego_data[3];
+    // check_vy = nonego_data[4];
+    check_s = nonego_data[5];
+    check_d = nonego_data[6];
+
+    // car_x = jmt.x_position[0];
+    // car_y = jmt.y_position[0];
+    // car_s = jmt.s_position[0];
+    if(check_d > LANE_WIDTH*lane && check_d < LANE_WIDTH*(lane+1) && ego_s<check_s){
+      if(distance(check_x, check_y, ego_x, ego_y) < min_dist)
+        min_dist = distance(check_x, check_y, ego_x, ego_y);
+
+    }
+    
+  }
+  
+  std::cout << "following cost: " << (following_distance-min_dist)/following_distance << std::endl;
+  return (following_distance-min_dist)/following_distance;
+}
+
+
+double lane_change_cost(vector <vector <double>> sensor_fusion, const JerkMinimalTrajectory &jmt, int lane, bool is_lane_change, double ego_x, double ego_y, double ego_s){
+  double check_x, check_y, check_vx, check_vy, check_s, check_d;
+  double car_x, car_y, x_disp, y_disp;
+
+  if(!is_lane_change)
+    return 0;
+
+  for(auto nonego_data: sensor_fusion){
+    check_x = nonego_data[1];
+    check_y = nonego_data[2];
+    check_vx = nonego_data[3];
+    check_vy = nonego_data[4];
+    check_s = nonego_data[5];
+    check_d = nonego_data[6];
+
+    // car_x = jmt.x_position[0];
+    // car_y = jmt.y_position[0];
+    if(check_d > LANE_WIDTH*lane && check_d < LANE_WIDTH*(lane+1) && abs(ego_s-check_s)<15)
+      return 1;
+  }
+  return 0;
+}
+
 
 double final_speed_cost(vector <vector <double>> sensor_fusion, const JerkMinimalTrajectory &jmt, int lane){
   double target_speed = MPH_TO_MPS*MAX_SPEED_MPH;
-  double init_x, init_y, final_x, final_y;
   double final_speed =  magnitude(jmt.s_velocity[NUM_SIMULATOR_POINTS-1], jmt.d_velocity[NUM_SIMULATOR_POINTS-1]);
   // std::cout << "speed cost: " << (target_speed-final_speed)/target_speed << std::endl;
   return (target_speed-final_speed)/target_speed;
+}
+
+double final_lane_cost(vector <vector <double>> sensor_fusion, const JerkMinimalTrajectory &jmt, int lane){
+  double target_speed = MPH_TO_MPS*MAX_SPEED_MPH;
+  double car_d = jmt.d_position[NUM_SIMULATOR_POINTS-1];
+
+  if(car_d > LANE_WIDTH*lane && car_d < LANE_WIDTH*(lane+1))
+    return 0;
+  return 1;
 }
 
 double lane_speed_cost(vector <vector <double>> sensor_fusion, const JerkMinimalTrajectory &jmt, int lane){
@@ -47,66 +111,12 @@ double lane_speed_cost(vector <vector <double>> sensor_fusion, const JerkMinimal
   return (target_speed-lane_speed)/target_speed;
 }
 
-double following_cost(vector <vector <double>> sensor_fusion, const JerkMinimalTrajectory &jmt, int lane){
-  double check_x, check_y, check_vx, check_vy, check_s, check_d;
-  double car_x, car_y;
-  double following_distance = 30;
-  double min_dist = following_distance;
-
-  for(auto nonego_data: sensor_fusion){
-    check_x = nonego_data[1];
-    check_y = nonego_data[2];
-    check_vx = nonego_data[3];
-    check_vy = nonego_data[4];
-    check_s = nonego_data[5];
-    check_d = nonego_data[6];
-
-    car_x = jmt.x_position[0];
-    car_y = jmt.y_position[0];
-    if(check_d > LANE_WIDTH*lane && check_d < LANE_WIDTH*(lane+1))
-      if(distance(check_x, check_y, car_x, car_y) < min_dist)
-        min_dist = distance(check_x, check_y, car_x, car_y);
-    
-  }
-  
-  std::cout << "following cost: " << (following_distance-min_dist)/following_distance << std::endl;
-  return (following_distance-min_dist)/following_distance;
-}
-
-
-double collision_cost(vector <vector <double>> sensor_fusion, const JerkMinimalTrajectory &jmt, int lane, double prev_size){
-  double check_x, check_y, check_vx, check_vy, check_s, check_d;
-  double car_x, car_y, x_disp, y_disp;
-  double collision_distance = LANE_WIDTH*0.75;
-  double min_dist = collision_distance;
-
-  for(auto nonego_data: sensor_fusion){
-    check_x = nonego_data[1];
-    check_y = nonego_data[2];
-    check_vx = nonego_data[3];
-    check_vy = nonego_data[4];
-    check_s = nonego_data[5];
-    check_d = nonego_data[6];
-
-    for(int i=0; i<NUM_SIMULATOR_POINTS; i++){
-      x_disp = check_vx*UPDATE_RATE*(prev_size+i+1);
-      y_disp = check_vy*UPDATE_RATE*(prev_size+i+1);
-      car_x = jmt.x_position[i];
-      car_y = jmt.y_position[i];
-      if(distance(check_x+x_disp, check_y+y_disp, car_x, car_y) < min_dist)
-        min_dist = distance(check_x + x_disp, check_y + y_disp, car_x, car_y);
-    }
-  }
-  std::cout << "collision cost: " << (collision_distance-min_dist)/collision_distance << std::endl;
-  return (collision_distance-min_dist)/collision_distance;
-}
-
 
 double outofbounds_cost(vector <vector <double>> sensor_fusion, const JerkMinimalTrajectory &jmt, int lane){
   double car_d;
   for(int i=0; i<NUM_SIMULATOR_POINTS; i++){
     car_d = jmt.d_position[i];
-    if(car_d<0 || car_d>(3*LANE_WIDTH))
+    if(car_d<0.5|| car_d>(3*LANE_WIDTH-0.5))
       return 1;
   }
     
