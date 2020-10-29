@@ -131,7 +131,7 @@ void JerkMinimalTrajectory::fill_buffers(){
   double s, d;
 
   for(int i=0;i<NUM_SIMULATOR_POINTS;i++){
-    s = fmod(this->get_position((i+1)*UPDATE_RATE, S_COORD), TRACK_LENGTH);
+    s = this->get_position((i+1)*UPDATE_RATE, S_COORD);
     d = this->get_position((i+1)*UPDATE_RATE, D_COORD);
 
     this->s_position.push_back(s);
@@ -146,7 +146,6 @@ void JerkMinimalTrajectory::fill_buffers(){
 
     this->x_position.push_back(this->s_x(s) + d*this->s_dx(s));
     this->y_position.push_back(this->s_y(s) + d*this->s_dy(s));
-    // std::cout << "final velocity s:\t" << s_velocity[i] << std::endl;
   }
 
 }
@@ -180,7 +179,7 @@ bool JerkMinimalTrajectory::valid_trajectory(){
     total_velocity = magnitude(this->get_velocity((i+1)*UPDATE_RATE, S_COORD), this->get_velocity((i+1)*UPDATE_RATE, D_COORD));
     total_acceleration = magnitude(this->get_acceleration((i+1)*UPDATE_RATE, S_COORD), this->get_acceleration((i+1)*UPDATE_RATE, D_COORD));
     total_jerk = magnitude(this->get_jerk((i+1)*UPDATE_RATE, S_COORD), this->get_jerk((i+1)*UPDATE_RATE, D_COORD));
-    if(MAX_ACC*0.95 <= total_acceleration || MAX_SPEED_MPH*MPH_TO_MPS*0.95 <= total_velocity || MAX_JERK*0.95 <= total_jerk ){
+    if(MAX_ACC*0.90 <= total_acceleration || MAX_SPEED_MPH*MPH_TO_MPS*0.95 <= total_velocity || MAX_JERK*0.95 <= total_jerk ){
       is_valid = false;
       // std::cout << " ACC: " << total_acceleration << ",  VEL: " << total_velocity << ", JERK: " << total_jerk <<  std::endl;
       break;

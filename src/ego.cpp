@@ -41,19 +41,6 @@ bool EgoVehicle::valid_turn(vehicle_state turn_state, vector <vector <double>> s
   int destination = (turn_state == LANE_CHANGE_LEFT) ? this->current_lane-1: this->current_lane+1;
 
   if((turn_state==LANE_CHANGE_RIGHT && this->current_lane<2) || (turn_state==LANE_CHANGE_LEFT && this->current_lane>0)){
-    // for(auto nonego_data: sensor_fusion){
-    //   check_x = nonego_data[1];
-    //   check_y = nonego_data[2];
-    //   check_vx = nonego_data[3];
-    //   check_vy = nonego_data[4];
-    //   check_s = nonego_data[5];
-    //   check_d = nonego_data[6];
-
-    //   if(check_d > LANE_WIDTH*destination && check_d < LANE_WIDTH*(destination+1))
-    //     if((check_s>this->current_s  && (check_s-this->current_s)<front_buffer) || 
-    //        (check_s<this->current_s  && (this->current_s-check_s)<back_buffer))
-    //        return false;
-    // }
     return true;
   }
 
@@ -90,7 +77,7 @@ vector <vector <double>> EgoVehicle::transition_function(vector <vector <double>
     }
     else
       costs[state] = calculate_cost(sensor_fusion, this->jmt, this->current_lane, false, this->current_x, this->current_y, this->current_s);
-    std::cout << statenames[state] << ", cost: " << costs[state] << std::endl;
+    // std::cout << statenames[state] << ", cost: " << costs[state] << std::endl;
 
   }
 
@@ -176,10 +163,10 @@ vector <vector<double>> EgoVehicle::keep_lane_trajectory(vector <vector <double>
   }
   
   if(previous_path_size){
-    boundary_f = {fmod(initial_conditions[0]+add_on_dist, TRACK_LENGTH), final_s_vel, 0.0, 2+LANE_WIDTH*this->current_lane, 0.0, 0.0};
+    boundary_f = {initial_conditions[0]+add_on_dist, final_s_vel, 0.0, 2+LANE_WIDTH*this->current_lane, 0.0, 0.0};
   }
   else{
-    boundary_f = {fmod(this->current_s+add_on_dist, TRACK_LENGTH), final_s_vel, 0.0, 2+LANE_WIDTH*this->current_lane, 0.0, 0.0};
+    boundary_f = {this->current_s+add_on_dist, final_s_vel, 0.0, 2+LANE_WIDTH*this->current_lane, 0.0, 0.0};
   }
 
   Tmin = add_on_dist/final_s_vel;
@@ -213,10 +200,10 @@ vector <vector<double>> EgoVehicle::lane_change_trajectory(vehicle_state new_sta
   }
   
   if(previous_path_size){
-    boundary_f = {fmod(initial_conditions[0]+add_on_dist, TRACK_LENGTH), final_s_vel, 0.0, 2+LANE_WIDTH*destination, 0.0, 0.0};
+    boundary_f = {initial_conditions[0]+add_on_dist, final_s_vel, 0.0, 2+LANE_WIDTH*destination, 0.0, 0.0};
   }
   else{
-    boundary_f = {fmod(this->current_s+add_on_dist, TRACK_LENGTH), final_s_vel, 0.0, 2+LANE_WIDTH*destination, 0.0, 0.0};
+    boundary_f = {this->current_s+add_on_dist, final_s_vel, 0.0, 2+LANE_WIDTH*destination, 0.0, 0.0};
   }
   Tmin = add_on_dist/final_s_vel;
 

@@ -135,3 +135,25 @@ vector<double> getXY(double s, double d, const vector<double> &maps_s,
 
   return {x,y};
 }
+
+void extend_waypoints(vector<double> &map_waypoints_x, 
+                   vector<double> &map_waypoints_y, vector<double> &map_waypoints_s, 
+                   vector<double> &map_waypoints_dx, vector<double> &map_waypoints_dy){
+  double x, y, dx, dy, s;
+  int num_laps=10, n=map_waypoints_s.size();
+
+  for(int lap=1; lap<=num_laps; lap++)
+    for(int i=0; i<n; i++){
+      x =  map_waypoints_x[i];
+      y =  map_waypoints_y[i];
+      dx = map_waypoints_dx[i];
+      dy = map_waypoints_dy[i];
+      s =  map_waypoints_s[i] + TRACK_LENGTH*lap;
+
+      map_waypoints_x.push_back(x);
+      map_waypoints_y.push_back(y);
+      map_waypoints_dx.push_back(dx);
+      map_waypoints_dy.push_back(dy);
+      map_waypoints_s.push_back(s);
+    }
+}

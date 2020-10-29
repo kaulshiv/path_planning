@@ -52,6 +52,9 @@ int main() {
   }
 
   EgoVehicle ego_vehicle(KEEP_LANE, 1);
+  std::cout << "Num waypoints before: " << map_waypoints_x.size() << std::endl;
+  extend_waypoints(map_waypoints_x, map_waypoints_y, map_waypoints_s, map_waypoints_dx, map_waypoints_dy);
+  std::cout << "Num waypoints after: " << map_waypoints_x.size() << std::endl;
   ego_vehicle.set_splines(map_waypoints_x, map_waypoints_y, map_waypoints_s, map_waypoints_dx, map_waypoints_dy);
   h.onMessage([&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,
                &map_waypoints_dx,&map_waypoints_dy, &ego_vehicle]
